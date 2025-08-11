@@ -1,0 +1,195 @@
+1) S(t) = A*sin(2π f t) — time domain
+matlab
+Edit
+% 1. S(t) = A*sin(2*pi*f*t)
+A = 1; f = 5; Fs = 1000; T = 1; t = 0:1/Fs:T;
+s = A*sin(2*pi*f*t);
+
+figure; plot(t,s); grid on;
+xlabel('Time (s)'); ylabel('Amplitude'); title('s(t)=A sin(2\pi f t)');
+
+
+2) S(t) = A*cos(2π f t + phi) — time domain
+matlab
+Copy
+Edit
+% 2. S(t) = A*cos(2*pi*f*t + phi)
+A = 1; f = 5; phi = pi/4; Fs = 1000; T = 1; t = 0:1/Fs:T;
+s = A*cos(2*pi*f*t + phi);
+
+figure; plot(t,s); grid on;
+xlabel('Time (s)'); ylabel('Amplitude'); title('s(t)=A cos(2\pi f t + \phi)');
+3) S(t) = A*cos(2π f t) — show frequency domain (FFT)
+matlab
+Copy
+Edit
+% 3. S(t)=A*cos(2*pi*f*t) and its frequency-domain (magnitude)
+A=1; f=50; Fs=2000; T=0.1; t=0:1/Fs:T-1/Fs;
+s = A*cos(2*pi*f*t);
+
+N = length(s);
+S = fft(s);
+S_mag = abs(fftshift(S))/N;
+faxis = (-N/2:N/2-1)*(Fs/N);
+
+figure;
+subplot(2,1,1); plot(t,s); xlabel('t'); title('time domain');
+subplot(2,1,2); plot(faxis,S_mag); xlabel('Frequency (Hz)'); title('Magnitude Spectrum');
+xlim([-200 200]);
+grid on;
+4) S(t) = A * e^{-α t} * sin(2π f t) — damped sinusoid in time
+matlab
+Copy
+Edit
+% 4. S(t) = A*exp(-alpha*t)*sin(2*pi*f*t)
+A = 1; alpha = 5; f = 10; Fs = 2000; T = 1; t = 0:1/Fs:T;
+s = A .* exp(-alpha*t) .* sin(2*pi*f*t);
+
+figure; plot(t,s); grid on;
+xlabel('Time (s)'); ylabel('Amplitude'); title('Damped sinusoid: A e^{-αt} sin(2\pi f t)');
+5) Generate a square wave using a sinusoidal signal
+(You can use square() — or build manually by sign())
+
+matlab
+Copy
+Edit
+% 5. Square wave (using built-in)
+A = 1; f = 5; Fs = 1000; T = 1; t = 0:1/Fs:T;
+sq = A * square(2*pi*f*t);  % outputs ±A
+
+figure; plot(t,sq); ylim([-1.5 1.5]); grid on;
+xlabel('Time (s)'); title('Square Wave');
+
+% --- Alternative: make square from sine sign:
+sq2 = A .* sign(sin(2*pi*f*t));
+6) Generate the sawtooth wave
+(use sawtooth() from Signal Processing Toolbox; simple manual version also shown)
+
+matlab
+Copy
+Edit
+% 6. Sawtooth wave
+A = 1; f = 5; Fs = 1000; T = 1; t = 0:1/Fs:T;
+saw = A * sawtooth(2*pi*f*t);  % range approx [-1,1]
+
+figure; plot(t,saw); grid on;
+xlabel('Time (s)'); title('Sawtooth wave');
+
+% Manual sawtooth (if sawtooth unavailable):
+period = 1/f;
+saw_manual = A*(2*(t/period - floor(1/2 + t/period)));
+7) Manchester line coding of data stream 10110010
+(Manchester: each bit interval is split into two halves. Convention used here: bit 1 -> [1 -1] (high then low), bit 0 -> [-1 1])
+
+matlab
+Copy
+Edit
+% 7. Manchester coding for bit pattern
+bits = [1 0 1 1 0 0 1 0];    % example from sheet
+Fs = 100;                    % samples per bit
+t = 0:1/Fs:length(bits)-1/Fs;
+signal = zeros(1, length(bits)*Fs);
+
+for k = 1:length(bits)
+    idx = (k-1)*Fs + (1:Fs);
+    half = Fs/2;
+    if bits(k)==1
+        signal(idx(1:half)) =  1;
+        signal(idx(half+1:end)) = -1;
+    else
+        signal(idx(1:half)) = -1;
+        signal(idx(half+1:end)) =  1;
+    end
+end
+
+time = (0:length(signal)-1)/Fs;
+figure; plot(time,signal,'LineWidth',1.5); ylim([-1.5 1.5]); grid on;
+xlabel('Time (bit periods)'); title('Manchester coded signal');
+8) Bipolar AMI coding of data stream 10101001
+(AMI: logical 1 pulses alternate +V, -V; 0 -> 0)
+
+matlab
+Copy
+Edit
+% 8. Bipolar AMI line coding
+bits = [1 0 1 0 1 0 0 1];   % example
+Fs = 100;                   % samples per bit
+V = 1;
+signal = zeros(1,length(bits)*Fs);
+lastSign = -1;
+
+for k=1:length(bits)
+    idx = (k-1)*Fs + (1:Fs);
+    if bits(k)==1
+        lastSign = -lastSign;          % alternate polarity
+        signal(idx) = lastSign * V;
+    else
+        signal(idx) = 0;
+    end
+end
+
+time = (0:length(signal)-1)/Fs;
+figure; plot(time,signal,'LineWidth',1.5); ylim([-1.5 1.5]); grid on;
+xlabel('Time (bit periods)'); title('Bipolar AMI coded signal');
+9) Amplitude modulation (DSB-SC or DSB-T) of a cosine message signal
+(Here both DSB-SC and conventional AM with carrier are shown)
+
+matlab
+Copy
+Edit
+% 9. Amplitude modulation of a cosine message
+Am = 1; fm = 5; Ac = 1; fc = 100; Fs = 5000; T=1;
+t = 0:1/Fs:T;
+
+m = Am*cos(2*pi*fm*t);         % message
+% DSB-SC (carrier suppressed)
+s_dsbsc = m .* cos(2*pi*fc*t);
+
+% Conventional AM (with carrier): s = (1 + mu*m(t)) * cos(2*pi*fc*t)
+mu = 0.7; % modulation index (0..1 typical)
+% scale message to [-1,1] if needed
+m_norm = m / Am;
+s_am = (1 + mu*m_norm) .* cos(2*pi*fc*t);
+
+figure;
+subplot(3,1,1); plot(t(1:500), m(1:500)); title('Message signal');
+subplot(3,1,2); plot(t(1:500), s_dsbsc(1:500)); title('DSB-SC modulated (time)');
+subplot(3,1,3); plot(t(1:500), s_am(1:500)); title('Conventional AM (with carrier)');
+xlabel('Time (s)');
+10) Pulse Code Modulation (PCM) of a sinusoidal signal
+(sample the sinusoid, quantize to N bits, produce quantized signal & bitstream)
+
+matlab
+Copy
+Edit
+% 10. PCM of a sinusoid
+fsig = 5; Fs = 1000; T = 1;
+t = 0:1/Fs:T;
+x = 1.0 * sin(2*pi*fsig*t);      % analog message
+
+% Sampling (already sampled at Fs) -> x_sampled
+x_sampled = x;
+
+% Quantization parameters
+Nbits = 3;                      % number of quantization bits
+L = 2^Nbits;                    % levels
+xmin = -1; xmax = 1;
+delta = (xmax - xmin)/L;
+% mid-riser quantizer:
+q_ind = floor((x_sampled - xmin)/delta); 
+q_ind(q_ind < 0) = 0; q_ind(q_ind > L-1) = L-1;
+xq = xmin + (q_ind + 0.5)*delta;  % quantized values (reconstructed)
+
+% PCM bitstream (array of bits per sample)
+% convert indices to binary
+pcm_bits = de2bi(q_ind, Nbits, 'left-msb');  % requires Communications Toolbox? de2bi in base works too sometimes
+pcm_bits = reshape(pcm_bits.',1,[]); % serial bitstream
+
+% Plot
+figure;
+subplot(2,1,1); plot(t,x,'b',t,xq,'r--'); legend('Original','Quantized');
+xlabel('Time (s)'); title(sprintf('PCM quantized (%d bits)',Nbits));
+subplot(2,1,2); stairs(0:length(xq)-1, q_ind); xlabel('Sample index'); ylabel('Level index');
+
+% Display first 32 PCM bits
+disp('First 32 PCM bits:'); disp(pcm_bits(1:min(32,length(pcm_bits))));
